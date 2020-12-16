@@ -1,18 +1,38 @@
 spring:
+  profiles:
+#    active: h2
+    active: mysql
   datasource:
-    url: jdbc:h2:file:./temp/data/h2;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MYSQL
-    driverClassName: org.h2.Driver
-    username: sa
-    password: 123456
+    schema: classpath:sql/schema.sql
   jpa:
-    show-sql: true
-    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: false
+    generate-ddl: true
     hibernate:
-      ddl-auto: create
-  h2:
-    console:
+      ddl-auto: create-drop
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: '*'
+  endpoint:
+    env:
       enabled: true
-      path: /h2
-      settings:
-        web-allow-others: true
-        web-admin-password: 123456
+    mappings:
+      enabled: true
+    beans:
+      enabled: true
+    health:
+      enabled: true
+      show-details: always
+    configprops:
+      enabled: true
+    info:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  info:
+    git:
+      mode: full

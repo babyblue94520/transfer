@@ -1,28 +1,23 @@
 package com.example.transfer.config;
 
-import com.example.transfer.data.entity.Account;
-import com.example.transfer.data.repository.AccountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 
-import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.List;
 
 @Configuration
-public class AccountConfig {
-    public static final int AccountCount = 10;
-    public static final int DefaultPoint = 100000;
+public class AccountConfig implements CommandLineRunner {
+    public static final int AccountCount = 10000;
+    public static final int DefaultPoint = 10000;
 
     @Autowired
-    private AccountRepository accountRepository;
+    private JdbcTemplate jdbcTemplate;
 
-    @PostConstruct
-    private void init() {
-        List<Account> accounts = new ArrayList<>();
+    @Override
+    public void run(String... args) {
         for (int i = 1; i <= AccountCount; i++) {
-            accounts.add(new Account(i, DefaultPoint));
+            jdbcTemplate.update("insert account(point) values(?)", DefaultPoint);
         }
-        accountRepository.saveAll(accounts);
     }
 }
