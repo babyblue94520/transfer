@@ -22,24 +22,55 @@ import java.util.concurrent.*;
 @RestController
 @RequestMapping("account")
 public class AccountController {
-    public static final int AccountCount = 10;
-    public static final int DefaultPoint = 1000;
 
     @Autowired
     public AccountService accountService;
 
     private AllResult result() {
         List<Account> accounts = accountService.findAll();
-        Long total = 0L;
-        for (Account account : accounts) {
-            total += account.getPoint();
-        }
-        return new AllResult(accounts, total);
+        return new AllResult(accounts, accountService.total());
     }
 
     @ApiOperation(value = "查詢所有帳戶")
     @GetMapping("all")
     public AllResult findAll() {
+        return result();
+    }
+
+
+    @ApiOperation(value = "批次新增")
+    @PostMapping("batch")
+    public String batchCreate(
+            @ApiParam(value = "執行緒數量", example = "8")
+            @RequestParam Integer thread
+            , @ApiParam(value = "數量", example = "1")
+            @RequestParam Long count
+            , @ApiParam(value = "點數", example = "1")
+            @RequestParam Integer point
+    ) throws InterruptedException, ExecutionException {
+        ExecutorService executorService = Executors.newFixedThreadPool(thread);
+        List<Callable<Long>> tasks = new ArrayList<>();
+        for (int i = 0; i < thread; i++) {
+            tasks.add(() -> accountService.batchCreate(count, point));
+        }
+        long t = System.currentTimeMillis();
+        List<Future<Long>> futures = executorService.invokeAll(tasks);
+        long total = 0;
+        for (Future<Long> future : futures) {
+            total += future.get();
+        }
+        long ms = System.currentTimeMillis() - t;
+        return String.format("交易次數：%s\n耗費時間：%d\n每秒交易次數：%d"
+                , total
+                , ms
+                , (total * 1000 / ms)
+        );
+    }
+
+    @ApiOperation(value = "清除帳戶")
+    @DeleteMapping("truncate")
+    public AllResult truncate() {
+        accountService.truncate();
         return result();
     }
 
@@ -106,22 +137,11 @@ public class AccountController {
         }
         long ms = System.currentTimeMillis() - t;
 
-        List<Account> accounts = accountService.findAll();
-        StringBuilder detail = new StringBuilder();
-        Long totalPoint = 0L;
-        for (Account account : accounts) {
-            totalPoint += account.getPoint();
-            detail.append(account.getId())
-                    .append('>')
-                    .append(account.getPoint())
-                    .append('\n');
-        }
-        return String.format("交易次數：%s\n耗費時間：%d\n每秒交易次數：%d\n帳戶總額；%d\n明細：\n%s"
+        return String.format("交易次數：%s\n耗費時間：%d\n每秒交易次數：%d\n帳戶總額:%d"
                 , total
                 , ms
                 , (total * 1000 / ms)
-                , totalPoint
-                , detail.toString()
+                , accountService.total()
         );
     }
 
@@ -153,7 +173,7 @@ public class AccountController {
                     );
                     if (result.getStatus()
                             && !(Objects.equals(result.getSource().getBefore() - result.getPoint(), result.getSource().getAfter())
-                                    && Objects.equals(result.getTarget().getBefore() + result.getPoint(), result.getTarget().getAfter()) )
+                            && Objects.equals(result.getTarget().getBefore() + result.getPoint(), result.getTarget().getAfter()))
                     ) {
                         throw new RuntimeException(String.format("交易結果異常：%s", result));
                     }
@@ -172,22 +192,11 @@ public class AccountController {
             return e.getMessage();
         }
         long ms = System.currentTimeMillis() - t;
-        List<Account> accounts = accountService.findAll();
-        StringBuilder detail = new StringBuilder();
-        Long totalPoint = 0L;
-        for (Account account : accounts) {
-            totalPoint += account.getPoint();
-            detail.append(account.getId())
-                    .append('>')
-                    .append(account.getPoint())
-                    .append('\n');
-        }
-        return String.format("交易次數：%s\n耗費時間：%d\n每秒交易次數：%d\n帳戶總額；%d\n明細：\n%s"
+        return String.format("交易次數：%s\n耗費時間：%d\n每秒交易次數：%d\n帳戶總額:%d"
                 , total
                 , ms
                 , (total * 1000 / ms)
-                , totalPoint
-                , detail.toString()
+                , accountService.total()
         );
     }
 }
